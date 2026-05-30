@@ -1,5 +1,3 @@
-CREATE DATABASE IF NOT EXISTS auth_service;
-
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,

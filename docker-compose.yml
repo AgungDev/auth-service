@@ -12,7 +12,7 @@ services:
     ports:
       - "${DB_PORT}:5432"
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql
       - ./migrations/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - auth_net
