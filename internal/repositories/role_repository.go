@@ -1,9 +1,11 @@
 package repositories
 
 import (
+	"context"
 	"auth_service/internal/domain"
 	"errors"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -17,14 +19,14 @@ func NewRoleRepository(db *gorm.DB) RoleRepositoryInterface {
 }
 
 // Create inserts a new role into the database
-func (r *roleRepository) Create(role *domain.Role) error {
-	return r.db.Create(role).Error
+func (r *roleRepository) Create(ctx context.Context, role *domain.Role) error {
+	return r.db.WithContext(ctx).Create(role).Error
 }
 
 // FindByID finds a role by ID
-func (r *roleRepository) FindByID(id uint) (*domain.Role, error) {
+func (r *roleRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Role, error) {
 	var role domain.Role
-	if err := r.db.Where("id = ?", id).First(&role).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&role).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -34,9 +36,9 @@ func (r *roleRepository) FindByID(id uint) (*domain.Role, error) {
 }
 
 // FindByName finds a role by name
-func (r *roleRepository) FindByName(name string) (*domain.Role, error) {
+func (r *roleRepository) FindByName(ctx context.Context, name string) (*domain.Role, error) {
 	var role domain.Role
-	if err := r.db.Where("name = ?", name).First(&role).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("name = ?", name).First(&role).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -46,20 +48,20 @@ func (r *roleRepository) FindByName(name string) (*domain.Role, error) {
 }
 
 // FindAll retrieves all roles
-func (r *roleRepository) FindAll() ([]domain.Role, error) {
+func (r *roleRepository) FindAll(ctx context.Context) ([]domain.Role, error) {
 	var roles []domain.Role
-	if err := r.db.Find(&roles).Error; err != nil {
+	if err := r.db.WithContext(ctx).Find(&roles).Error; err != nil {
 		return nil, err
 	}
 	return roles, nil
 }
 
 // Update updates an existing role
-func (r *roleRepository) Update(id uint, role *domain.Role) error {
-	return r.db.Model(&domain.Role{}).Where("id = ?", id).Updates(role).Error
+func (r *roleRepository) Update(ctx context.Context, id uuid.UUID, role *domain.Role) error {
+	return r.db.WithContext(ctx).Model(&domain.Role{}).Where("id = ?", id).Updates(role).Error
 }
 
 // Delete deletes a role by ID
-func (r *roleRepository) Delete(id uint) error {
-	return r.db.Delete(&domain.Role{}, id).Error
+func (r *roleRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return r.db.WithContext(ctx).Delete(&domain.Role{}, id).Error
 }

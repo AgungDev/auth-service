@@ -1,9 +1,11 @@
 package repositories
 
 import (
+	"context"
 	"auth_service/internal/domain"
 	"errors"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -17,14 +19,14 @@ func NewUserRepository(db *gorm.DB) UserRepositoryInterface {
 }
 
 // Create inserts a new user into the database
-func (r *userRepository) Create(user *domain.User) error {
-	return r.db.Create(user).Error
+func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
+	return r.db.WithContext(ctx).Create(user).Error
 }
 
 // FindByID finds a user by ID
-func (r *userRepository) FindByID(id uint) (*domain.User, error) {
+func (r *userRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
 	var user domain.User
-	if err := r.db.Where("id = ?", id).First(&user).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -34,9 +36,9 @@ func (r *userRepository) FindByID(id uint) (*domain.User, error) {
 }
 
 // FindByUsername finds a user by username
-func (r *userRepository) FindByUsername(username string) (*domain.User, error) {
+func (r *userRepository) FindByUsername(ctx context.Context, username string) (*domain.User, error) {
 	var user domain.User
-	if err := r.db.Where("username = ?", username).First(&user).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("username = ?", username).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -46,9 +48,9 @@ func (r *userRepository) FindByUsername(username string) (*domain.User, error) {
 }
 
 // FindByEmail finds a user by email
-func (r *userRepository) FindByEmail(email string) (*domain.User, error) {
+func (r *userRepository) FindByEmail(ctx context.Context, email string) (*domain.User, error) {
 	var user domain.User
-	if err := r.db.Where("email = ?", email).First(&user).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -58,20 +60,20 @@ func (r *userRepository) FindByEmail(email string) (*domain.User, error) {
 }
 
 // FindAll retrieves all users
-func (r *userRepository) FindAll() ([]domain.User, error) {
+func (r *userRepository) FindAll(ctx context.Context) ([]domain.User, error) {
 	var users []domain.User
-	if err := r.db.Find(&users).Error; err != nil {
+	if err := r.db.WithContext(ctx).Find(&users).Error; err != nil {
 		return nil, err
 	}
 	return users, nil
 }
 
 // Update updates an existing user
-func (r *userRepository) Update(id uint, user *domain.User) error {
-	return r.db.Model(&domain.User{}).Where("id = ?", id).Updates(user).Error
+func (r *userRepository) Update(ctx context.Context, id uuid.UUID, user *domain.User) error {
+	return r.db.WithContext(ctx).Model(&domain.User{}).Where("id = ?", id).Updates(user).Error
 }
 
 // Delete deletes a user by ID
-func (r *userRepository) Delete(id uint) error {
-	return r.db.Delete(&domain.User{}, id).Error
+func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return r.db.WithContext(ctx).Delete(&domain.User{}, id).Error
 }
