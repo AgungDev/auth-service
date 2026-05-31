@@ -1,10 +1,13 @@
 package usecases
 
 import (
+	"context"
+	"errors"
+
 	"auth_service/internal/domain"
 	"auth_service/internal/domain/dto"
 	"auth_service/internal/repositories"
-	"errors"
+	"github.com/google/uuid"
 )
 
 type permissionUsecase struct {
@@ -17,9 +20,9 @@ func NewPermissionUsecase(permissionRepo repositories.PermissionRepositoryInterf
 }
 
 // Create creates a new permission
-func (uc *permissionUsecase) Create(req dto.PermissionRequest) (*domain.Permission, error) {
+func (uc *permissionUsecase) Create(ctx context.Context, req dto.PermissionRequest) (*domain.Permission, error) {
 	// Check if permission already exists
-	existingPermission, err := uc.permissionRepo.FindByName(req.Name)
+	existingPermission, err := uc.permissionRepo.FindByName(ctx, req.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -29,11 +32,12 @@ func (uc *permissionUsecase) Create(req dto.PermissionRequest) (*domain.Permissi
 
 	// Create permission
 	permission := &domain.Permission{
+		Code:        req.Code,
 		Name:        req.Name,
 		Description: req.Description,
 	}
 
-	if err := uc.permissionRepo.Create(permission); err != nil {
+	if err := uc.permissionRepo.Create(ctx, permission); err != nil {
 		return nil, err
 	}
 
@@ -41,30 +45,36 @@ func (uc *permissionUsecase) Create(req dto.PermissionRequest) (*domain.Permissi
 }
 
 // GetByID retrieves a permission by ID
-func (uc *permissionUsecase) GetByID(id uint) (*domain.Permission, error) {
-	return uc.permissionRepo.FindByID(id)
+func (uc *permissionUsecase) GetByID(ctx context.Context, id uuid.UUID) (*domain.Permission, error) {
+	return uc.permissionRepo.FindByID(ctx, id)
 }
 
 // GetByName retrieves a permission by name
-func (uc *permissionUsecase) GetByName(name string) (*domain.Permission, error) {
-	return uc.permissionRepo.FindByName(name)
+func (uc *permissionUsecase) GetByName(ctx context.Context, name string) (*domain.Permission, error) {
+	return uc.permissionRepo.FindByName(ctx, name)
+}
+
+// GetByUserID retrieves permissions linked to the user's roles
+func (uc *permissionUsecase) GetByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Permission, error) {
+	return uc.permissionRepo.FindByUserID(ctx, userID)
 }
 
 // GetAll retrieves all permissions
-func (uc *permissionUsecase) GetAll() ([]domain.Permission, error) {
-	return uc.permissionRepo.FindAll()
+func (uc *permissionUsecase) GetAll(ctx context.Context) ([]domain.Permission, error) {
+	return uc.permissionRepo.FindAll(ctx)
 }
 
 // Update updates permission information
-func (uc *permissionUsecase) Update(id uint, req dto.PermissionRequest) error {
+func (uc *permissionUsecase) Update(ctx context.Context, id uuid.UUID, req dto.PermissionRequest) error {
 	permission := &domain.Permission{
+		Code:        req.Code,
 		Name:        req.Name,
 		Description: req.Description,
 	}
-	return uc.permissionRepo.Update(id, permission)
+	return uc.permissionRepo.Update(ctx, id, permission)
 }
 
 // Delete removes a permission
-func (uc *permissionUsecase) Delete(id uint) error {
-	return uc.permissionRepo.Delete(id)
+func (uc *permissionUsecase) Delete(ctx context.Context, id uuid.UUID) error {
+	return uc.permissionRepo.Delete(ctx, id)
 }

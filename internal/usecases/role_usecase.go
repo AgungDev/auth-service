@@ -1,10 +1,13 @@
 package usecases
 
 import (
+	"context"
+	"errors"
+
 	"auth_service/internal/domain"
 	"auth_service/internal/domain/dto"
 	"auth_service/internal/repositories"
-	"errors"
+	"github.com/google/uuid"
 )
 
 type roleUsecase struct {
@@ -17,9 +20,9 @@ func NewRoleUsecase(roleRepo repositories.RoleRepositoryInterface) RoleUsecaseIn
 }
 
 // Create creates a new role
-func (uc *roleUsecase) Create(req dto.RoleRequest) (*domain.Role, error) {
+func (uc *roleUsecase) Create(ctx context.Context, req dto.RoleRequest) (*domain.Role, error) {
 	// Check if role already exists
-	existingRole, err := uc.roleRepo.FindByName(req.Name)
+	existingRole, err := uc.roleRepo.FindByName(ctx, req.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -29,11 +32,12 @@ func (uc *roleUsecase) Create(req dto.RoleRequest) (*domain.Role, error) {
 
 	// Create role
 	role := &domain.Role{
+		Code:        req.Code,
 		Name:        req.Name,
 		Description: req.Description,
 	}
 
-	if err := uc.roleRepo.Create(role); err != nil {
+	if err := uc.roleRepo.Create(ctx, role); err != nil {
 		return nil, err
 	}
 
@@ -41,30 +45,31 @@ func (uc *roleUsecase) Create(req dto.RoleRequest) (*domain.Role, error) {
 }
 
 // GetByID retrieves a role by ID
-func (uc *roleUsecase) GetByID(id uint) (*domain.Role, error) {
-	return uc.roleRepo.FindByID(id)
+func (uc *roleUsecase) GetByID(ctx context.Context, id uuid.UUID) (*domain.Role, error) {
+	return uc.roleRepo.FindByID(ctx, id)
 }
 
 // GetByName retrieves a role by name
-func (uc *roleUsecase) GetByName(name string) (*domain.Role, error) {
-	return uc.roleRepo.FindByName(name)
+func (uc *roleUsecase) GetByName(ctx context.Context, name string) (*domain.Role, error) {
+	return uc.roleRepo.FindByName(ctx, name)
 }
 
 // GetAll retrieves all roles
-func (uc *roleUsecase) GetAll() ([]domain.Role, error) {
-	return uc.roleRepo.FindAll()
+func (uc *roleUsecase) GetAll(ctx context.Context) ([]domain.Role, error) {
+	return uc.roleRepo.FindAll(ctx)
 }
 
 // Update updates role information
-func (uc *roleUsecase) Update(id uint, req dto.RoleRequest) error {
+func (uc *roleUsecase) Update(ctx context.Context, id uuid.UUID, req dto.RoleRequest) error {
 	role := &domain.Role{
+		Code:        req.Code,
 		Name:        req.Name,
 		Description: req.Description,
 	}
-	return uc.roleRepo.Update(id, role)
+	return uc.roleRepo.Update(ctx, id, role)
 }
 
 // Delete removes a role
-func (uc *roleUsecase) Delete(id uint) error {
-	return uc.roleRepo.Delete(id)
+func (uc *roleUsecase) Delete(ctx context.Context, id uuid.UUID) error {
+	return uc.roleRepo.Delete(ctx, id)
 }

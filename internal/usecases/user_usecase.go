@@ -1,26 +1,30 @@
 package usecases
 
 import (
+	"context"
+	"errors"
+
 	"auth_service/internal/domain"
 	"auth_service/internal/domain/dto"
 	"auth_service/internal/repositories"
-	"auth_service/pkg"
-	"errors"
+	"auth_service/internal/security"
+	"github.com/google/uuid"
 )
 
 type userUsecase struct {
-	userRepo repositories.UserRepositoryInterface
+	userRepo  repositories.UserRepositoryInterface
+	security security.SecurityService
 }
 
 // NewUserUsecase creates a new user usecase instance
-func NewUserUsecase(userRepo repositories.UserRepositoryInterface) UserUsecaseInterface {
-	return &userUsecase{userRepo: userRepo}
+func NewUserUsecase(userRepo repositories.UserRepositoryInterface, securityService security.SecurityService) UserUsecaseInterface {
+	return &userUsecase{userRepo: userRepo, security: securityService}
 }
 
 // Register handles user registration with validation and password hashing
-func (uc *userUsecase) Register(req dto.UserRegisterRequest) (*domain.User, error) {
+func (uc *userUsecase) Register(ctx context.Context, req dto.UserRegisterRequest) (*domain.User, error) {
 	// Check if username already exists
-	existingUser, err := uc.userRepo.FindByUsername(req.Username)
+	existingUser, err := uc.userRepo.FindByUsername(ctx, req.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +33,7 @@ func (uc *userUsecase) Register(req dto.UserRegisterRequest) (*domain.User, erro
 	}
 
 	// Check if email already exists
-	existingEmail, err := uc.userRepo.FindByEmail(req.Email)
+	existingEmail, err := uc.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +42,7 @@ func (uc *userUsecase) Register(req dto.UserRegisterRequest) (*domain.User, erro
 	}
 
 	// Hash password
-	hashedPassword, err := pkg.HashPassword(req.Password)
+	hashedPassword, err := uc.security.HashPassword(req.Password)
 	if err != nil {
 		return nil, errors.New("failed to hash password")
 	}
@@ -49,10 +53,10 @@ func (uc *userUsecase) Register(req dto.UserRegisterRequest) (*domain.User, erro
 		Email:        req.Email,
 		PasswordHash: hashedPassword,
 		FullName:     req.FullName,
-		IsActive:     true,
+		Status:       "active",
 	}
 
-	if err := uc.userRepo.Create(user); err != nil {
+	if err := uc.userRepo.Create(ctx, user); err != nil {
 		return nil, err
 	}
 
@@ -60,9 +64,9 @@ func (uc *userUsecase) Register(req dto.UserRegisterRequest) (*domain.User, erro
 }
 
 // Login validates user credentials
-func (uc *userUsecase) Login(req dto.UserLoginRequest) (*domain.User, error) {
+func (uc *userUsecase) Login(ctx context.Context, req dto.UserLoginRequest) (*domain.User, error) {
 	// Find user by username
-	user, err := uc.userRepo.FindByUsername(req.Username)
+	user, err := uc.userRepo.FindByUsername(ctx, req.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -73,12 +77,12 @@ func (uc *userUsecase) Login(req dto.UserLoginRequest) (*domain.User, error) {
 	}
 
 	// Check if user is active
-	if !user.IsActive {
+	if user.Status != "active" {
 		return nil, errors.New("user is not active")
 	}
 
 	// Verify password
-	if !pkg.CheckPasswordHash(req.Password, user.PasswordHash) {
+	if !uc.security.CheckPasswordHash(req.Password, user.PasswordHash) {
 		return nil, errors.New("invalid credentials")
 	}
 
@@ -86,30 +90,30 @@ func (uc *userUsecase) Login(req dto.UserLoginRequest) (*domain.User, error) {
 }
 
 // GetByID retrieves a user by ID
-func (uc *userUsecase) GetByID(id uint) (*domain.User, error) {
-	return uc.userRepo.FindByID(id)
+func (uc *userUsecase) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+	return uc.userRepo.FindByID(ctx, id)
 }
 
 // GetByUsername retrieves a user by username
-func (uc *userUsecase) GetByUsername(username string) (*domain.User, error) {
-	return uc.userRepo.FindByUsername(username)
+func (uc *userUsecase) GetByUsername(ctx context.Context, username string) (*domain.User, error) {
+	return uc.userRepo.FindByUsername(ctx, username)
 }
 
 // GetAll retrieves all users
-func (uc *userUsecase) GetAll() ([]domain.User, error) {
-	return uc.userRepo.FindAll()
+func (uc *userUsecase) GetAll(ctx context.Context) ([]domain.User, error) {
+	return uc.userRepo.FindAll(ctx)
 }
 
 // Update updates user information
-func (uc *userUsecase) Update(id uint, req dto.UserUpdateRequest) error {
+func (uc *userUsecase) Update(ctx context.Context, id uuid.UUID, req dto.UserUpdateRequest) error {
 	user := &domain.User{
 		FullName: req.FullName,
 		Email:    req.Email,
 	}
-	return uc.userRepo.Update(id, user)
+	return uc.userRepo.Update(ctx, id, user)
 }
 
 // Delete removes a user
-func (uc *userUsecase) Delete(id uint) error {
-	return uc.userRepo.Delete(id)
+func (uc *userUsecase) Delete(ctx context.Context, id uuid.UUID) error {
+	return uc.userRepo.Delete(ctx, id)
 }

@@ -1,10 +1,13 @@
 package usecases
 
 import (
-	"auth_service/internal/domain"
-	"auth_service/internal/repositories"
+	"context"
 	"errors"
 	"time"
+
+	"auth_service/internal/domain"
+	"auth_service/internal/repositories"
+	"github.com/google/uuid"
 )
 
 type tokenUsecase struct {
@@ -17,18 +20,18 @@ func NewTokenUsecase(tokenRepo repositories.TokenRepositoryInterface) TokenUseca
 }
 
 // Create creates a new token
-func (uc *tokenUsecase) Create(token *domain.Token) error {
-	return uc.tokenRepo.Create(token)
+func (uc *tokenUsecase) Create(ctx context.Context, token *domain.Token) error {
+	return uc.tokenRepo.Create(ctx, token)
 }
 
 // GetByID retrieves a token by ID
-func (uc *tokenUsecase) GetByID(id uint) (*domain.Token, error) {
-	return uc.tokenRepo.FindByID(id)
+func (uc *tokenUsecase) GetByID(ctx context.Context, id uuid.UUID) (*domain.Token, error) {
+	return uc.tokenRepo.FindByID(ctx, id)
 }
 
-// GetByAccessToken retrieves a token by access token
-func (uc *tokenUsecase) GetByAccessToken(accessToken string) (*domain.Token, error) {
-	token, err := uc.tokenRepo.FindByAccessToken(accessToken)
+// GetByRefreshTokenHash retrieves a token by refresh token hash
+func (uc *tokenUsecase) GetByRefreshTokenHash(ctx context.Context, refreshTokenHash string) (*domain.Token, error) {
+	token, err := uc.tokenRepo.FindByRefreshTokenHash(ctx, refreshTokenHash)
 	if err != nil {
 		return nil, err
 	}
@@ -39,24 +42,32 @@ func (uc *tokenUsecase) GetByAccessToken(accessToken string) (*domain.Token, err
 }
 
 // GetByUserID retrieves a token by user ID
-func (uc *tokenUsecase) GetByUserID(userID uint) (*domain.Token, error) {
-	return uc.tokenRepo.FindByUserID(userID)
+func (uc *tokenUsecase) GetByUserID(ctx context.Context, userID uuid.UUID) (*domain.Token, error) {
+	return uc.tokenRepo.FindByUserID(ctx, userID)
 }
 
 // Update updates token information
-func (uc *tokenUsecase) Update(id uint, token *domain.Token) error {
-	return uc.tokenRepo.Update(id, token)
+func (uc *tokenUsecase) Update(ctx context.Context, id uuid.UUID, token *domain.Token) error {
+	return uc.tokenRepo.Update(ctx, id, token)
 }
 
 // Delete removes a token
-func (uc *tokenUsecase) Delete(id uint) error {
-	return uc.tokenRepo.Delete(id)
+func (uc *tokenUsecase) Delete(ctx context.Context, id uuid.UUID) error {
+	return uc.tokenRepo.Delete(ctx, id)
+}
+
+// DeleteByUserID removes tokens for a user
+func (uc *tokenUsecase) DeleteByUserID(ctx context.Context, userID uuid.UUID) error {
+	return uc.tokenRepo.DeleteByUserID(ctx, userID)
 }
 
 // IsTokenExpired checks if a token has expired
 func (uc *tokenUsecase) IsTokenExpired(token *domain.Token) bool {
-	if token.ExpiresAt == 0 {
+	if token == nil {
+		return true
+	}
+	if token.ExpiresAt.IsZero() {
 		return false
 	}
-	return time.Now().Unix() > token.ExpiresAt
+	return time.Now().After(token.ExpiresAt)
 }
