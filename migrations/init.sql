@@ -1,59 +1,80 @@
--- Users table
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- Users
 CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username VARCHAR(64) UNIQUE NOT NULL,
     email VARCHAR(128) UNIQUE NOT NULL,
-    password_hash VARCHAR(128) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(128),
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    status VARCHAR(20) NOT NULL DEFAULT 'active',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Roles table
+-- Roles
 CREATE TABLE IF NOT EXISTS roles (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(64) UNIQUE NOT NULL,
-    description VARCHAR(128)
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(64) UNIQUE NOT NULL,
+    name VARCHAR(128) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Permissions table
+-- Permissions
 CREATE TABLE IF NOT EXISTS permissions (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(64) UNIQUE NOT NULL,
-    description VARCHAR(128)
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(128) UNIQUE NOT NULL,
+    name VARCHAR(128) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Role-Permissions mapping
-CREATE TABLE IF NOT EXISTS role_permissions (
-    role_id INTEGER REFERENCES roles(id),
-    permission_id INTEGER REFERENCES permissions(id),
-    PRIMARY KEY (role_id, permission_id)
-);
-
--- User-Roles mapping
+-- User Roles
 CREATE TABLE IF NOT EXISTS user_roles (
-    user_id INTEGER REFERENCES users(id),
-    role_id INTEGER REFERENCES roles(id),
-    PRIMARY KEY (user_id, role_id)
+    user_id UUID NOT NULL,
+    role_id UUID NOT NULL,
+    PRIMARY KEY (user_id, role_id),
+    CONSTRAINT fk_user_roles_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_user_roles_role FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
 );
 
--- Clients table
+-- Role Permissions
+CREATE TABLE IF NOT EXISTS role_permissions (
+    role_id UUID NOT NULL,
+    permission_id UUID NOT NULL,
+    PRIMARY KEY (role_id, permission_id),
+    CONSTRAINT fk_role_permissions_role FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+    CONSTRAINT fk_role_permissions_permission FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
+);
+
+-- OAuth Clients
 CREATE TABLE IF NOT EXISTS clients (
-    id SERIAL PRIMARY KEY,
-    client_id VARCHAR(64) UNIQUE NOT NULL,
-    client_secret_hash VARCHAR(128) NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id VARCHAR(128) UNIQUE NOT NULL,
+    client_secret_hash VARCHAR(255) NOT NULL,
+    name VARCHAR(128) NOT NULL,
     redirect_uris TEXT,
     grants TEXT,
-    is_confidential BOOLEAN DEFAULT TRUE
+    is_confidential BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- OAuth tokens table
-CREATE TABLE IF NOT EXISTS oauth_tokens (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    client_id INTEGER REFERENCES clients(id),
-    access_token TEXT NOT NULL,
-    refresh_token TEXT NOT NULL,
-    expires_at TIMESTAMP
+-- Tokens
+CREATE TABLE IF NOT EXISTS tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    client_id UUID,
+    refresh_token_hash TEXT NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_tokens_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
 );
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_tokens_user ON tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_tokens_client ON tokens(client_id);
+CREATE INDEX IF NOT EXISTS idx_tokens_expires_at ON tokens(expires_at);
