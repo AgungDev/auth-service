@@ -12,7 +12,7 @@ import (
 )
 
 type userUsecase struct {
-	userRepo  repositories.UserRepositoryInterface
+	userRepo repositories.UserRepositoryInterface
 	security security.SecurityService
 }
 
@@ -116,4 +116,34 @@ func (uc *userUsecase) Update(ctx context.Context, id uuid.UUID, req dto.UserUpd
 // Delete removes a user
 func (uc *userUsecase) Delete(ctx context.Context, id uuid.UUID) error {
 	return uc.userRepo.Delete(ctx, id)
+}
+
+// AssignRoles assigns roles to a user
+func (uc *userUsecase) AssignRoles(ctx context.Context, userID uuid.UUID, roleIDs []uuid.UUID) error {
+	return uc.userRepo.AssignRoles(ctx, userID, roleIDs)
+}
+
+// GetRolesByUserID retrieves roles assigned to a user
+func (uc *userUsecase) GetRolesByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Role, error) {
+	return uc.userRepo.GetRolesByUserID(ctx, userID)
+}
+
+// RemoveRole removes a role from a user
+func (uc *userUsecase) RemoveRole(ctx context.Context, userID uuid.UUID, roleID uuid.UUID) error {
+	return uc.userRepo.RemoveRole(ctx, userID, roleID)
+}
+
+// AssignPermissions assigns direct permissions to a user
+func (uc *userUsecase) AssignPermissions(ctx context.Context, userID uuid.UUID, permissionIDs []uuid.UUID) error {
+	return uc.userRepo.AssignPermissions(ctx, userID, permissionIDs)
+}
+
+// GetPermissions retrieves direct permissions assigned to a user
+func (uc *userUsecase) GetPermissions(ctx context.Context, userID uuid.UUID) ([]domain.Permission, error) {
+	return uc.userRepo.GetPermissions(ctx, userID)
+}
+
+// RemovePermission removes a direct permission from a user
+func (uc *userUsecase) RemovePermission(ctx context.Context, userID uuid.UUID, permissionID uuid.UUID) error {
+	return uc.userRepo.RemovePermission(ctx, userID, permissionID)
 }

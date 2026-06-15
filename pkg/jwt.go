@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"errors"
 	"io/ioutil"
 	"time"
 
@@ -16,6 +17,10 @@ type Claims struct {
 }
 
 func LoadPrivateKey(path string) ([]byte, error) {
+	return ioutil.ReadFile(path)
+}
+
+func LoadPublicKey(path string) ([]byte, error) {
 	return ioutil.ReadFile(path)
 }
 
@@ -39,4 +44,29 @@ func GenerateJWTRS256(sub, iss string, roles []interface{}, privateKeyPath strin
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	return token.SignedString(privKey)
+}
+
+func ValidateJWTRS256(tokenString string, publicKeyPath string) (*Claims, error) {
+	keyData, err := LoadPublicKey(publicKeyPath)
+	if err != nil {
+		return nil, err
+	}
+	pubKey, err := jwt.ParseRSAPublicKeyFromPEM(keyData)
+	if err != nil {
+		return nil, err
+	}
+	parsedToken, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return pubKey, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	claims, ok := parsedToken.Claims.(*Claims)
+	if !ok || !parsedToken.Valid {
+		return nil, errors.New("invalid token")
+	}
+	return claims, nil
 }

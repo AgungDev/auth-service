@@ -1,8 +1,8 @@
 package repositories
 
 import (
-	"context"
 	"auth_service/internal/domain"
+	"context"
 	"errors"
 
 	"github.com/google/uuid"
@@ -76,4 +76,82 @@ func (r *userRepository) Update(ctx context.Context, id uuid.UUID, user *domain.
 // Delete deletes a user by ID
 func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Delete(&domain.User{}, id).Error
+}
+
+// AssignRoles assigns roles to a user
+func (r *userRepository) AssignRoles(ctx context.Context, userID uuid.UUID, roleIDs []uuid.UUID) error {
+	for _, roleID := range roleIDs {
+		if err := r.db.WithContext(ctx).Exec(
+			"INSERT INTO user_roles (user_id, role_id) VALUES (?, ?) ON CONFLICT DO NOTHING",
+			userID,
+			roleID,
+		).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// GetRolesByUserID retrieves roles assigned to a user
+func (r *userRepository) GetRolesByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Role, error) {
+	var roles []domain.Role
+	err := r.db.WithContext(ctx).Raw(
+		`SELECT r.*
+		FROM roles r
+		JOIN user_roles ur ON ur.role_id = r.id
+		WHERE ur.user_id = ?`,
+		userID,
+	).Scan(&roles).Error
+	if err != nil {
+		return nil, err
+	}
+	return roles, nil
+}
+
+// RemoveRole removes a role assignment from a user
+func (r *userRepository) RemoveRole(ctx context.Context, userID uuid.UUID, roleID uuid.UUID) error {
+	return r.db.WithContext(ctx).Exec(
+		"DELETE FROM user_roles WHERE user_id = ? AND role_id = ?",
+		userID,
+		roleID,
+	).Error
+}
+
+// AssignPermissions assigns direct permissions to a user
+func (r *userRepository) AssignPermissions(ctx context.Context, userID uuid.UUID, permissionIDs []uuid.UUID) error {
+	for _, permissionID := range permissionIDs {
+		if err := r.db.WithContext(ctx).Exec(
+			"INSERT INTO user_permissions (user_id, permission_id) VALUES (?, ?) ON CONFLICT DO NOTHING",
+			userID,
+			permissionID,
+		).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// GetPermissions retrieves direct permissions assigned to a user
+func (r *userRepository) GetPermissions(ctx context.Context, userID uuid.UUID) ([]domain.Permission, error) {
+	var permissions []domain.Permission
+	err := r.db.WithContext(ctx).Raw(
+		`SELECT p.*
+		FROM permissions p
+		JOIN user_permissions up ON up.permission_id = p.id
+		WHERE up.user_id = ?`,
+		userID,
+	).Scan(&permissions).Error
+	if err != nil {
+		return nil, err
+	}
+	return permissions, nil
+}
+
+// RemovePermission removes a direct permission from a user
+func (r *userRepository) RemovePermission(ctx context.Context, userID uuid.UUID, permissionID uuid.UUID) error {
+	return r.db.WithContext(ctx).Exec(
+		"DELETE FROM user_permissions WHERE user_id = ? AND permission_id = ?",
+		userID,
+		permissionID,
+	).Error
 }

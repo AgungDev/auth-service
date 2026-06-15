@@ -73,3 +73,18 @@ func (uc *roleUsecase) Update(ctx context.Context, id uuid.UUID, req dto.RoleReq
 func (uc *roleUsecase) Delete(ctx context.Context, id uuid.UUID) error {
 	return uc.roleRepo.Delete(ctx, id)
 }
+
+// AssignPermissions assigns permissions to a role
+func (uc *roleUsecase) AssignPermissions(ctx context.Context, roleID uuid.UUID, permissionIDs []uuid.UUID) error {
+	return uc.roleRepo.AssignPermissions(ctx, roleID, permissionIDs)
+}
+
+// GetPermissionsByRoleID retrieves permissions assigned to a role
+func (uc *roleUsecase) GetPermissionsByRoleID(ctx context.Context, roleID uuid.UUID) ([]domain.Permission, error) {
+	return uc.roleRepo.GetPermissionsByRoleID(ctx, roleID)
+}
+
+// RemovePermission removes a permission from a role
+func (uc *roleUsecase) RemovePermission(ctx context.Context, roleID uuid.UUID, permissionID uuid.UUID) error {
+	return uc.roleRepo.RemovePermission(ctx, roleID, permissionID)
+}

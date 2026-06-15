@@ -1,8 +1,8 @@
 package repositories
 
 import (
-	"context"
 	"auth_service/internal/domain"
+	"context"
 	"errors"
 
 	"github.com/google/uuid"
@@ -64,4 +64,43 @@ func (r *roleRepository) Update(ctx context.Context, id uuid.UUID, role *domain.
 // Delete deletes a role by ID
 func (r *roleRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Delete(&domain.Role{}, id).Error
+}
+
+// AssignPermissions assigns permissions to a role
+func (r *roleRepository) AssignPermissions(ctx context.Context, roleID uuid.UUID, permissionIDs []uuid.UUID) error {
+	for _, permissionID := range permissionIDs {
+		if err := r.db.WithContext(ctx).Exec(
+			"INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?) ON CONFLICT DO NOTHING",
+			roleID,
+			permissionID,
+		).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// GetPermissionsByRoleID retrieves permissions assigned to a role
+func (r *roleRepository) GetPermissionsByRoleID(ctx context.Context, roleID uuid.UUID) ([]domain.Permission, error) {
+	var permissions []domain.Permission
+	err := r.db.WithContext(ctx).Raw(
+		`SELECT p.*
+		FROM permissions p
+		JOIN role_permissions rp ON rp.permission_id = p.id
+		WHERE rp.role_id = ?`,
+		roleID,
+	).Scan(&permissions).Error
+	if err != nil {
+		return nil, err
+	}
+	return permissions, nil
+}
+
+// RemovePermission removes a permission from a role
+func (r *roleRepository) RemovePermission(ctx context.Context, roleID uuid.UUID, permissionID uuid.UUID) error {
+	return r.db.WithContext(ctx).Exec(
+		"DELETE FROM role_permissions WHERE role_id = ? AND permission_id = ?",
+		roleID,
+		permissionID,
+	).Error
 }

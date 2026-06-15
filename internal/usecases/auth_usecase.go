@@ -9,6 +9,7 @@ import (
 	"auth_service/internal/domain"
 	"auth_service/internal/domain/dto"
 	"auth_service/internal/security"
+	loggerpkg "auth_service/pkg/logger"
 	"github.com/google/uuid"
 )
 
@@ -23,6 +24,7 @@ type authUsecase struct {
 	permissionUsecase PermissionUsecaseInterface
 	tokenUsecase      TokenUsecaseInterface
 	security          security.SecurityService
+	logger            loggerpkg.Logger
 	appName           string
 	accessTokenTTLMin int
 	refreshTokenTTLHr int
@@ -34,6 +36,7 @@ func NewAuthUsecase(
 	permissionUsecase PermissionUsecaseInterface,
 	tokenUsecase TokenUsecaseInterface,
 	securityService security.SecurityService,
+	logger loggerpkg.Logger,
 	appName string,
 	accessTokenTTLMinutes int,
 	refreshTokenTTLHours int,
@@ -44,6 +47,7 @@ func NewAuthUsecase(
 		permissionUsecase: permissionUsecase,
 		tokenUsecase:      tokenUsecase,
 		security:          securityService,
+		logger:            logger,
 		appName:           appName,
 		accessTokenTTLMin: accessTokenTTLMinutes,
 		refreshTokenTTLHr: refreshTokenTTLHours,
@@ -185,20 +189,70 @@ func (uc *authUsecase) Introspect(ctx context.Context, token string) (*dto.Intro
 }
 
 func (uc *authUsecase) Authorize(ctx context.Context, subject string, roles []interface{}, req dto.AuthorizeRequest) (*dto.AuthorizeResponse, error) {
+	uc.logger.Info("", "", req.UserID, fmt.Sprintf("authorize request: user_id=%s, permission=%s", req.UserID, req.Permission))
+
 	if req.UserID != subject {
-		return nil, ErrUserIDMismatch
+		uc.logger.Warn("", "", req.UserID, fmt.Sprintf("user id mismatch: token subject=%s, request user_id=%s", subject, req.UserID))
+		return &dto.AuthorizeResponse{
+			Authorized: false,
+			UserID:     req.UserID,
+			Permission: req.Permission,
+		}, ErrUserIDMismatch
 	}
 
-	if !hasPermission(roles, req.Permission) {
-		return nil, ErrNotAuthorized
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		uc.logger.Error("", "", req.UserID, fmt.Sprintf("failed to parse user id: %v", err))
+		return &dto.AuthorizeResponse{
+			Authorized: false,
+			UserID:     req.UserID,
+			Permission: req.Permission,
+		}, err
 	}
 
-	return &dto.AuthorizeResponse{Authorized: true}, nil
+	permissions, err := uc.permissionUsecase.GetByUserID(ctx, userID)
+	if err != nil {
+		uc.logger.Error("", "", req.UserID, fmt.Sprintf("failed to get user permissions: %v", err))
+		return &dto.AuthorizeResponse{
+			Authorized: false,
+			UserID:     req.UserID,
+			Permission: req.Permission,
+		}, err
+	}
+
+	uc.logger.Info("", "", req.UserID, fmt.Sprintf("user permissions retrieved: count=%d", len(permissions)))
+
+	has := false
+	for _, perm := range permissions {
+		if perm.Code == req.Permission {
+			has = true
+			break
+		}
+	}
+
+	if !has {
+		uc.logger.Warn("", "", req.UserID, fmt.Sprintf("permission not found: %s", req.Permission))
+		return &dto.AuthorizeResponse{
+			Authorized: false,
+			UserID:     req.UserID,
+			Permission: req.Permission,
+		}, ErrNotAuthorized
+	}
+
+	uc.logger.Info("", "", req.UserID, fmt.Sprintf("authorization granted: permission=%s", req.Permission))
+	return &dto.AuthorizeResponse{
+		Authorized: true,
+		UserID:     req.UserID,
+		Permission: req.Permission,
+	}, nil
 }
 
 func (uc *authUsecase) GetPermissionsByUserID(ctx context.Context, userID uuid.UUID) ([]string, error) {
+	uc.logger.Info("", "", userID.String(), "fetching user permissions from database")
+
 	permissions, err := uc.permissionUsecase.GetByUserID(ctx, userID)
 	if err != nil {
+		uc.logger.Error("", "", userID.String(), fmt.Sprintf("failed to get permissions: %v", err))
 		return nil, err
 	}
 
@@ -206,11 +260,50 @@ func (uc *authUsecase) GetPermissionsByUserID(ctx context.Context, userID uuid.U
 	for _, permission := range permissions {
 		permissionCodes = append(permissionCodes, permission.Code)
 	}
+
+	uc.logger.Info("", "", userID.String(), fmt.Sprintf("permissions retrieved: count=%d", len(permissionCodes)))
 	return permissionCodes, nil
 }
 
 func (uc *authUsecase) Logout(ctx context.Context, userID uuid.UUID) error {
 	return uc.tokenUsecase.DeleteByUserID(ctx, userID)
+}
+
+func (uc *authUsecase) GetUserProfile(ctx context.Context, userID uuid.UUID) (*dto.UserResponse, error) {
+	user, err := uc.userUsecase.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, nil
+	}
+	return &dto.UserResponse{
+		ID:       user.ID.String(),
+		Username: user.Username,
+		Email:    user.Email,
+		FullName: user.FullName,
+		Status:   user.Status,
+	}, nil
+}
+
+func (uc *authUsecase) CheckPermission(ctx context.Context, subject string, permission string) (bool, error) {
+	userID, err := uuid.Parse(subject)
+	if err != nil {
+		return false, err
+	}
+
+	permissions, err := uc.permissionUsecase.GetByUserID(ctx, userID)
+	if err != nil {
+		return false, err
+	}
+
+	for _, perm := range permissions {
+		if perm.Code == permission {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func hasPermission(roles []interface{}, permission string) bool {

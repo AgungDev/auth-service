@@ -17,8 +17,10 @@ type DBConfig struct {
 }
 
 type AppConfig struct {
-	Name string
-	Port string
+	Name        string
+	Port        string
+	Version     string
+	Environment string
 }
 
 type JWTConfig struct {
@@ -32,11 +34,33 @@ type Config struct {
 	JWTConfig
 }
 
+func LoadConfig() error {
+	viper.AutomaticEnv()
+	viper.SetConfigFile(".env")
+	viper.SetConfigType("env")
+
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (c *Config) setConfig() error {
+	if err := LoadConfig(); err != nil {
+		return err
+	}
 
 	// AppConfig
 	c.AppConfig.Name = viper.GetString("APP_NAME")
 	c.AppConfig.Port = viper.GetString("APP_PORT")
+	c.AppConfig.Version = viper.GetString("APP_VERSION")
+	c.AppConfig.Environment = viper.GetString("APP_ENV")
+	if c.AppConfig.Environment == "" {
+		c.AppConfig.Environment = "development"
+	}
 
 	// DBConfig
 	c.DBConfig.Host = viper.GetString("DB_HOST")
@@ -50,20 +74,13 @@ func (c *Config) setConfig() error {
 	c.JWTConfig.PrivateKeyPath = viper.GetString("JWT_PRIVATE_KEY_PATH")
 	c.JWTConfig.PublicKeyPath = viper.GetString("JWT_PUBLIC_KEY_PATH")
 
-	if c.DBConfig.Host == "" || c.DBConfig.Port == "" || c.DBConfig.User == "" || c.DBConfig.Password == "" || c.AppConfig.Port == "" {
-		return fmt.Errorf("Required configuration is missing!")
+	if c.AppConfig.Name == "" || c.AppConfig.Port == "" || c.AppConfig.Version == "" {
+		return fmt.Errorf("required application configuration is missing")
 	}
 
-	// create database URL connection
-	// c.DatabaseURL = fmt.Sprintf(
-	// 	"postgres://%s:%s@%s:%s/%s?sslmode=%s",	
-	// 	c.DBConfig.User,
-	// 	c.DBConfig.Password,
-	// 	c.DBConfig.Host,
-	// 	c.DBConfig.Port,
-	// 	c.DBConfig.Name,
-	// 	c.DBConfig.SSLMode,
-	// )
+	if c.DBConfig.Host == "" || c.DBConfig.Port == "" || c.DBConfig.User == "" || c.DBConfig.Password == "" {
+		return fmt.Errorf("required database configuration is missing")
+	}
 
 	return nil
 }

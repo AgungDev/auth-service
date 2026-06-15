@@ -1,8 +1,8 @@
 package repositories
 
 import (
-	"context"
 	"auth_service/internal/domain"
+	"context"
 	"errors"
 
 	"github.com/google/uuid"

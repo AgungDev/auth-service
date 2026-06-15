@@ -1,0 +1,446 @@
+basePath: /api/v1
+definitions:
+  http.AuthResponse:
+    properties:
+      access_token:
+        example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      expires_in:
+        example: 900
+        type: integer
+      refresh_token:
+        example: dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4=
+        type: string
+      token_type:
+        example: Bearer
+        type: string
+      user:
+        $ref: '#/definitions/http.UserResponse'
+    type: object
+  http.AuthorizeRequest:
+    properties:
+      permission:
+        example: users:read
+        type: string
+      user_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    type: object
+  http.AuthorizeResponse:
+    properties:
+      authorized:
+        example: true
+        type: boolean
+      permission:
+        example: users:read
+        type: string
+      user_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    type: object
+  http.ErrorResponse:
+    properties:
+      error:
+        example: username is required
+        type: string
+      message:
+        example: validation error
+        type: string
+      success:
+        example: false
+        type: boolean
+    type: object
+  http.IntrospectRequest:
+    properties:
+      token:
+        example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+  http.IntrospectResponse:
+    properties:
+      active:
+        example: true
+        type: boolean
+      permissions:
+        example:
+        - '["users:read"]'
+        items:
+          type: string
+        type: array
+      roles:
+        example:
+        - '["admin"]'
+        items:
+          type: string
+        type: array
+      user:
+        additionalProperties:
+          type: string
+        type: object
+    type: object
+  http.LoginRequest:
+    properties:
+      client_id:
+        example: gateway-app
+        type: string
+      password:
+        example: secret123
+        type: string
+      username:
+        example: johndoe
+        type: string
+    type: object
+  http.MessageResponse:
+    properties:
+      message:
+        example: logout success
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  http.PermissionRequest:
+    properties:
+      permission:
+        example: users:read
+        type: string
+    type: object
+  http.PermissionResponse:
+    properties:
+      allowed:
+        example: true
+        type: boolean
+    type: object
+  http.PermissionsResponse:
+    properties:
+      permissions:
+        example:
+        - '["users:read"'
+        - ' "users:write"]'
+        items:
+          type: string
+        type: array
+    type: object
+  http.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+  http.RegisterRequest:
+    properties:
+      email:
+        example: john.doe@example.com
+        type: string
+      full_name:
+        example: John Doe
+        type: string
+      password:
+        example: secret123
+        type: string
+      username:
+        example: johndoe
+        type: string
+    type: object
+  http.UserResponse:
+    properties:
+      email:
+        example: john.doe@example.com
+        type: string
+      full_name:
+        example: John Doe
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      status:
+        example: active
+        type: string
+      username:
+        example: johndoe
+        type: string
+    type: object
+host: localhost:9001
+info:
+  contact:
+    name: UMMU Development Team
+  description: Authentication and Authorization Service for UMMU Microservices
+  title: UMMU Auth Service API
+  version: 1.0.0
+paths:
+  /api/v1/auth/authorize:
+    post:
+      consumes:
+      - application/json
+      description: Check whether a specific user is authorized for a permission
+      parameters:
+      - description: Authorize request body
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/http.AuthorizeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.AuthorizeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Authorize a user permission
+      tags:
+      - Auth
+  /api/v1/auth/check-permission:
+    post:
+      consumes:
+      - application/json
+      description: Evaluate whether the authenticated user has a specific permission
+      parameters:
+      - description: Permission check request
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/http.PermissionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.PermissionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Check user permission
+      tags:
+      - Auth
+  /api/v1/auth/introspect:
+    post:
+      consumes:
+      - application/json
+      description: Inspect a token and return its active state, roles and permissions
+      parameters:
+      - description: Token introspection request
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/http.IntrospectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.IntrospectResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Verify access token
+      tags:
+      - Auth
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return JWT access token
+      parameters:
+      - description: Login request body
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/http.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Login user
+      tags:
+      - Auth
+  /api/v1/auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Revoke current user's session and refresh token state
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Logout current user
+      tags:
+      - Auth
+  /api/v1/auth/me:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve profile information for authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current user profile
+      tags:
+      - Auth
+  /api/v1/auth/permissions:
+    get:
+      consumes:
+      - application/json
+      description: Return list of permissions for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.PermissionsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get authenticated user permissions
+      tags:
+      - Auth
+  /api/v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refresh JWT access token using refresh token
+      parameters:
+      - description: Refresh token request
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/http.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Refresh access token
+      tags:
+      - Auth
+  /api/v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account
+      parameters:
+      - description: Register request body
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/http.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/http.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - Auth
+schemes:
+- http
+securityDefinitions:
+  BearerAuth:
+    description: 'Enter your bearer token in the format: Bearer {token}'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

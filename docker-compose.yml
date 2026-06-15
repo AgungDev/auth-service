@@ -28,7 +28,7 @@ services:
     depends_on:
       - db
     ports:
-      - "${APP_PORT}:8080"
+      - "${APP_PORT}:${APP_PORT}"
     volumes:
       - ./jwt_private.pem:/app/jwt_private.pem:ro
       - ./jwt_public.pem:/app/jwt_public.pem:ro

@@ -16,6 +16,12 @@ type UserRepositoryInterface interface {
 	FindAll(ctx context.Context) ([]domain.User, error)
 	Update(ctx context.Context, id uuid.UUID, user *domain.User) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	AssignRoles(ctx context.Context, userID uuid.UUID, roleIDs []uuid.UUID) error
+	GetRolesByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Role, error)
+	RemoveRole(ctx context.Context, userID uuid.UUID, roleID uuid.UUID) error
+	AssignPermissions(ctx context.Context, userID uuid.UUID, permissionIDs []uuid.UUID) error
+	GetPermissions(ctx context.Context, userID uuid.UUID) ([]domain.Permission, error)
+	RemovePermission(ctx context.Context, userID uuid.UUID, permissionID uuid.UUID) error
 }
 
 // ClientRepositoryInterface defines the interface for client repository operations
@@ -36,6 +42,9 @@ type RoleRepositoryInterface interface {
 	FindAll(ctx context.Context) ([]domain.Role, error)
 	Update(ctx context.Context, id uuid.UUID, role *domain.Role) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	AssignPermissions(ctx context.Context, roleID uuid.UUID, permissionIDs []uuid.UUID) error
+	GetPermissionsByRoleID(ctx context.Context, roleID uuid.UUID) ([]domain.Permission, error)
+	RemovePermission(ctx context.Context, roleID uuid.UUID, permissionID uuid.UUID) error
 }
 
 // PermissionRepositoryInterface defines the interface for permission repository operations

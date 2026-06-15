@@ -56,7 +56,7 @@ func (r *permissionRepository) FindAll(ctx context.Context) ([]domain.Permission
 	return permissions, nil
 }
 
-// FindByUserID retrieves permissions assigned to the user's roles
+// FindByUserID retrieves permissions assigned to the user's roles and direct permissions
 func (r *permissionRepository) FindByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Permission, error) {
 	var permissions []domain.Permission
 	err := r.db.WithContext(ctx).Raw(
@@ -64,7 +64,15 @@ func (r *permissionRepository) FindByUserID(ctx context.Context, userID uuid.UUI
 		FROM permissions p
 		JOIN role_permissions rp ON rp.permission_id = p.id
 		JOIN user_roles ur ON ur.role_id = rp.role_id
-		WHERE ur.user_id = ?`, userID).Scan(&permissions).Error
+		WHERE ur.user_id = ?
+		UNION
+		SELECT DISTINCT p.*
+		FROM permissions p
+		JOIN user_permissions up ON up.permission_id = p.id
+		WHERE up.user_id = ?`,
+		userID,
+		userID,
+	).Scan(&permissions).Error
 	if err != nil {
 		return nil, err
 	}

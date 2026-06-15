@@ -1,6 +1,6 @@
 # auth_service — Layanan Otentikasi untuk Sistem Informasi Akademik
 
-> Auth service khusus buat Universitas Muhammadiyah Maluku Utara. Semua proses login / otorisasi lewat sini. Ringkas, aman (usahakan), dan modular. Kalau nggak aman, kita perbaiki lagi — jangan panik dulu.
+> Auth service khusus buat Universitas Muhammadiyah Maluku Utara. Semua proses login / otorisasi lewat sini. Ringkas, aman (usahakan), dan modular.
 
 ---
 
@@ -77,7 +77,7 @@ Tabel utama:
 * `role_permissions` (role_id, permission_id)
 * `user_roles` (user_id, role_id)
 * `clients` (id, client_id, client_secret_hash, redirect_uris, grants, is_confidential)
-* `oauth_tokens` (id, user_id, client_id, access_token, refresh_token, expires_at)
+* `tokens` (id, user_id, client_id, refresh_token_hash, expires_at)
 
 > Tips: jangan simpan password atau client secret secara plain — hash dengan argon2id / bcrypt.
 
@@ -180,6 +180,46 @@ SIG_KEY_ALGO=RS256
 
 * `docker-compose.yml` untuk dev: postgres, migration, auth_service
 * Gunakan secrets untuk private key dan client secrets
+
+---
+
+## Swagger / OpenAPI Documentation
+
+* Install Swagger CLI:
+
+```bash
+go install github.com/swaggo/swag/cmd/swag@latest
+```
+
+* Install Gin Swagger packages:
+
+```bash
+go get github.com/swaggo/gin-swagger github.com/swaggo/files
+```
+
+* Generate Swagger docs:
+
+```bash
+make swagger
+```
+
+* On Windows PowerShell, use:
+
+```powershell
+.\swagger.ps1
+```
+
+* Swagger UI URL:
+
+```text
+http://localhost:9001/swagger/index.html
+```
+
+* Swagger route:
+
+```text
+/swagger/*any
+```
 
 ---
 
